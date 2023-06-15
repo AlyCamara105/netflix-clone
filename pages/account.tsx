@@ -1,10 +1,18 @@
+import Membership from "@/components/Membership";
 import useAuth from "@/hooks/useAuth";
 import useSubscription from "@/hooks/useSubscription";
+import payments from "@/lib/stripe";
+import { Product, getProducts } from "@stripe/firestore-stripe-payments";
+import { GetStaticProps } from "next";
 import Head from "next/head";
 import Link from "next/link";
 
-function account() {
-  const { user } = useAuth();
+interface Props {
+  products: Product[];
+}
+
+function account({ products }: Props) {
+  const { user, logout } = useAuth();
   const subscription = useSubscription(user);
 
   return (
@@ -32,8 +40,8 @@ function account() {
         </Link>
       </header>
 
-      <main className="pt-24">
-        <div>
+      <main className="mx-auto max-w-6xl pb-12 pt-24 transition-all md:px-10">
+        <div className="flex flex-col gap-x-4 md:flex-row">
           <h1 className="text-3xl md:text-4xl">Account</h1>
           <div className="-ml-0.5 flex items-center gap-x-1.5">
             <img src="https://rb.gy/4vfk4r" alt="" className="h-7 w-7" />
@@ -43,12 +51,30 @@ function account() {
           </div>
         </div>
 
-        {/* <Membership /> */}
+        <Membership />
 
-        <div>
-          <h4>Plan Details</h4>
-          {/* Find the current plan  */}
-          <div></div>
+        <div className="mt-6 grid grid-cols-1 gap-x-4 border px-4 py-4 md:grid-cols-4 md:border-x-0 md:border-b-0 md:border-t md:px-0 md:pb-0">
+          <h4 className="text-lg text-[gray]">Plan Details</h4>
+          {/* Find the current plan */}
+          <div className="col-span-2 font-medium">
+            {
+              products.filter(
+                (product) => product.id === subscription?.product
+              )[0]?.name
+            }
+          </div>
+          <p className="cursor-pointer text-blue-500 hover:underline md:text-right">
+            Change plan
+          </p>
+        </div>
+        <div className="mt-6 grid grid-cols-1 gap-x-4 border px-4 py-4 md:grid-cols-4 md:border-x-0 md:border-b-0 md:border-t md:px-0">
+          <h4 className="text-lg text-[gray]">Settings</h4>
+          <p
+            className="col-span-3 cursor-pointer text-blue-500 hover:underline"
+            onClick={logout}
+          >
+            Sign out of all devices
+          </p>
         </div>
       </main>
     </div>
@@ -56,3 +82,18 @@ function account() {
 }
 
 export default account;
+
+export const getStaticProps: GetStaticProps = async () => {
+  const products = await getProducts(payments, {
+    includePrices: true,
+    activeOnly: true,
+  })
+    .then((res) => res)
+    .catch((error) => console.log(error.message));
+
+  return {
+    props: {
+      products,
+    },
+  };
+};
